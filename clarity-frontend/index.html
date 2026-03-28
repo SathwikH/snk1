@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clarity — AI Cognitive Copilot</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4ff;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #3b5bdb;
+      color: white;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { font-size: 0.85rem; opacity: 0.8; margin-top: 2px; }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 32px 20px; }
+
+    /* Input section */
+    .input-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+    .input-card label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+    textarea {
+      width: 100%;
+      border: 2px solid #e0e7ff;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 1rem;
+      resize: vertical;
+      min-height: 110px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    textarea:focus { border-color: #3b5bdb; }
+
+    .btn {
+      margin-top: 14px;
+      background: #3b5bdb;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:hover { background: #2f4ac0; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    /* Emotion badge */
+    .emotion-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .emotion-confused  { background: #fff3cd; color: #856404; }
+    .emotion-stressed  { background: #fde8e8; color: #c0392b; }
+    .emotion-neutral   { background: #d1fae5; color: #065f46; }
+
+    /* Result cards */
+    .results { display: none; flex-direction: column; gap: 16px; }
+    .results.visible { display: flex; }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 22px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 10px;
+    }
+    .card-body { font-size: 1rem; line-height: 1.65; color: #1a1a2e; }
+
+    .card.response-card { border-left: 4px solid #3b5bdb; }
+    .card.simplified-card { border-left: 4px solid #10b981; }
+    .card.explanation-card { border-left: 4px solid #f59e0b; }
+    .card.emotion-card { border-left: 4px solid #8b5cf6; }
+
+    .emotion-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Memory timeline */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 32px 0 14px;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .timeline { display: flex; flex-direction: column; gap: 12px; }
+    .timeline-item {
+      background: white;
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .timeline-item:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .timeline-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .timeline-time { font-size: 0.78rem; color: #9ca3af; }
+    .timeline-text { font-size: 0.92rem; color: #374151; }
+    .timeline-empty { color: #9ca3af; font-size: 0.9rem; text-align: center; padding: 20px; }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg {
+      background: #fde8e8;
+      color: #c0392b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🧠 Clarity</h1>
+    <p>AI Cognitive Copilot — Real-Time Understanding & Memory</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Input -->
+  <div class="input-card">
+    <label for="textInput">Enter a sentence or conversation to process:</label>
+    <textarea id="textInput" placeholder="e.g. The physician recommended a bilateral nephrectomy due to renal carcinoma."></textarea>
+    <div class="error-msg" id="errorMsg"></div>
+    <button class="btn" id="processBtn" onclick="processText()">Analyze Text</button>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="card response-card">
+      <div class="card-title">💬 Supportive Response</div>
+      <div class="card-body" id="responseText"></div>
+    </div>
+    <div class="card simplified-card">
+      <div class="card-title">✏️ Simplified Text</div>
+      <div class="card-body" id="simplifiedText"></div>
+    </div>
+    <div class="card explanation-card">
+      <div class="card-title">📖 Word Explanations</div>
+      <div class="card-body" id="explanationText"></div>
+    </div>
+    <div class="card emotion-card">
+      <div class="card-title">🎭 Detected Emotion</div>
+      <div class="emotion-row">
+        <span class="emotion-badge" id="emotionBadge"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Memory Timeline -->
+  <div class="section-title">
+    🕐 Memory Timeline
+    <button class="btn" style="margin:0; padding:6px 16px; font-size:0.82rem;" onclick="loadMemory()">Refresh</button>
+  </div>
+  <div class="timeline" id="timeline">
+    <div class="timeline-empty">No interactions yet.</div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'http://localhost:3000';
+
+  async function processText() {
+    const text = document.getElementById('textInput').value.trim();
+    const btn = document.getElementById('processBtn');
+    const errorMsg = document.getElementById('errorMsg');
+
+    errorMsg.classList.remove('visible');
+
+    if (!text) {
+      showError('Please enter some text first.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Processing...';
+
+    try {
+      const res = await fetch(`${API}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.error || 'Something went wrong.');
+        return;
+      }
+
+      // Populate results
+      document.getElementById('responseText').textContent = data.response;
+      document.getElementById('simplifiedText').textContent = data.simplified_text;
+      document.getElementById('explanationText').textContent = data.explanation;
+
+      const badge = document.getElementById('emotionBadge');
+      badge.textContent = data.emotion;
+      badge.className = `emotion-badge emotion-${data.emotion}`;
+
+      document.getElementById('results').classList.add('visible');
+
+      // Refresh timeline
+      loadMemory();
+
+    } catch (err) {
+      showError('Could not connect to the backend. Make sure the server is running on port 3000.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Analyze Text';
+    }
+  }
+
+  async function loadMemory() {
+    try {
+      const res = await fetch(`${API}/memory`);
+      const data = await res.json();
+      const timeline = document.getElementById('timeline');
+
+      if (!data.length) {
+        timeline.innerHTML = '<div class="timeline-empty">No interactions yet.</div>';
+        return;
+      }
+
+      timeline.innerHTML = data.map(item => `
+        <div class="timeline-item">
+          <div class="timeline-meta">
+            <span class="emotion-badge emotion-${item.emotion}">${item.emotion}</span>
+            <span class="timeline-time">${new Date(item.timestamp).toLocaleString()}</span>
+          </div>
+          <div class="timeline-text">${item.original_text}</div>
+        </div>
+      `).join('');
+
+    } catch (err) {
+      // silently fail on timeline load
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+
+  // Allow Ctrl+Enter to submit
+  document.getElementById('textInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) processText();
+  });
+
+  // Load timeline on page open
+  loadMemory();
+</script>
+
+</body>
+</html>
