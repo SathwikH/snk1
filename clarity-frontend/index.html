@@ -4,243 +4,625 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clarity — AI Cognitive Copilot</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f0f4ff;
-      color: #1a1a2e;
-      min-height: 100vh;
+      background: #000;
+      color: white;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    header {
-      background: #3b5bdb;
-      color: white;
-      padding: 20px 32px;
+    /* Camera feed */
+    #camera {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* mirror */
+      z-index: 0;
+    }
+
+    /* Dark overlay when results show */
+    #dimmer {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #dimmer.active { opacity: 1; }
+
+    /* Top bar */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 16px 24px;
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+    }
+    .topbar h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; }
+    .topbar p { font-size: 0.78rem; opacity: 0.7; }
+
+    /* Mic button */
+    .mic-wrap {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       gap: 12px;
     }
-    header h1 { font-size: 1.5rem; font-weight: 700; }
-    header p { font-size: 0.85rem; opacity: 0.8; margin-top: 2px; }
 
-    .container { max-width: 860px; margin: 0 auto; padding: 32px 20px; }
-
-    /* Input section */
-    .input-card {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-      margin-bottom: 24px;
-    }
-    .input-card label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 10px;
-      font-size: 0.95rem;
-    }
-    textarea {
-      width: 100%;
-      border: 2px solid #e0e7ff;
-      border-radius: 10px;
-      padding: 14px;
-      font-size: 1rem;
-      resize: vertical;
-      min-height: 110px;
-      font-family: inherit;
-      transition: border-color 0.2s;
-      outline: none;
-    }
-    textarea:focus { border-color: #3b5bdb; }
-
-    .btn {
-      margin-top: 14px;
-      background: #3b5bdb;
-      color: white;
+    #micBtn {
+      width: 80px; height: 80px;
+      border-radius: 50%;
       border: none;
-      border-radius: 10px;
-      padding: 12px 28px;
-      font-size: 1rem;
-      font-weight: 600;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
       cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      color: white;
     }
-    .btn:hover { background: #2f4ac0; }
-    .btn:active { transform: scale(0.98); }
-    .btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+    #micBtn:hover { background: rgba(255,255,255,0.25); }
+    #micBtn.listening {
+      background: rgba(239, 68, 68, 0.8);
+      box-shadow: 0 0 0 0 rgba(239,68,68,0.6);
+      animation: pulse 1.2s infinite;
+    }
+    #micBtn.processing {
+      background: rgba(59, 91, 219, 0.8);
+      cursor: not-allowed;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+      70%  { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
 
-    /* Emotion badge */
+    #micLabel {
+      font-size: 0.82rem;
+      opacity: 0.85;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+      text-align: center;
+    }
+
+    /* Transcript bubble */
+    #transcript {
+      position: fixed;
+      bottom: 180px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #transcript.visible { opacity: 1; }
+
+    /* Results overlay — right side panel, never covers face */
+    #overlay {
+      position: fixed;
+      top: 50%;
+      right: 16px;
+      transform: translateY(-50%);
+      width: 280px;
+      z-index: 20;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    #overlay.visible { display: flex; }
+
+    .ov-card {
+      background: rgba(10, 10, 25, 0.85);
+      backdrop-filter: blur(16px);
+      border-radius: 12px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .ov-title {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.45;
+      margin-bottom: 5px;
+    }
+    .ov-body { font-size: 0.88rem; line-height: 1.5; }
+
+    .ov-card.response   { border-left: 3px solid #6c8fff; }
+    .ov-card.simplified { border-left: 3px solid #34d399; }
+    .ov-card.explanation { border-left: 3px solid #fbbf24; display: none; }
+    .ov-card.emotion-card { border-left: 3px solid #a78bfa; }
+
+    /* Live transcript strip */
+    #liveStrip {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(10px);
+      padding: 10px 20px;
+      font-size: 1rem;
+      z-index: 19;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      min-height: 44px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    #liveStrip.visible { display: flex; }
+    #liveStripText { flex: 1; opacity: 0.9; font-style: italic; }
+    #liveStripDot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: pulse-dot 1s infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
     .emotion-badge {
       display: inline-block;
-      padding: 4px 14px;
+      padding: 3px 12px;
       border-radius: 20px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .emotion-confused  { background: #fff3cd; color: #856404; }
-    .emotion-stressed  { background: #fde8e8; color: #c0392b; }
-    .emotion-neutral   { background: #d1fae5; color: #065f46; }
+    .emotion-happy     { background: rgba(251,191,36,0.25);  color: #fbbf24; }
+    .emotion-excited   { background: rgba(249,115,22,0.25);  color: #fb923c; }
+    .emotion-grateful  { background: rgba(52,211,153,0.25);  color: #34d399; }
+    .emotion-calm      { background: rgba(99,179,237,0.25);  color: #63b3ed; }
+    .emotion-surprised { background: rgba(167,139,250,0.25); color: #a78bfa; }
+    .emotion-confused  { background: rgba(251,191,36,0.2);   color: #fcd34d; }
+    .emotion-stressed  { background: rgba(239,68,68,0.25);   color: #f87171; }
+    .emotion-anxious   { background: rgba(217,119,6,0.25);   color: #f59e0b; }
+    .emotion-sad       { background: rgba(96,165,250,0.25);  color: #60a5fa; }
+    .emotion-angry     { background: rgba(220,38,38,0.3);    color: #ef4444; }
 
-    /* Result cards */
-    .results { display: none; flex-direction: column; gap: 16px; }
-    .results.visible { display: flex; }
-
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 22px 24px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    /* Close button — top of right panel */
+    #closeBtn {
+      position: fixed;
+      top: calc(50% - 40vh - 10px);
+      right: 16px;
+      z-index: 30;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border: none;
+      color: white;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
     }
-    .card-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #6b7280;
-      margin-bottom: 10px;
-    }
-    .card-body { font-size: 1rem; line-height: 1.65; color: #1a1a2e; }
+    #closeBtn.visible { display: flex; }
 
-    .card.response-card { border-left: 4px solid #3b5bdb; }
-    .card.simplified-card { border-left: 4px solid #10b981; }
-    .card.explanation-card { border-left: 4px solid #f59e0b; }
-    .card.emotion-card { border-left: 4px solid #8b5cf6; }
-
-    .emotion-row {
+    /* Memory panel toggle */
+    #memoryToggle {
+      position: fixed;
+      top: 20px; right: 72px;
+      z-index: 30;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border: none;
+      color: white;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 6px;
     }
 
-    /* Memory timeline */
-    .section-title {
+    /* Memory side panel */
+    #memoryPanel {
+      position: fixed;
+      top: 0; right: -360px;
+      width: 340px;
+      height: 100vh;
+      background: rgba(10,10,25,0.92);
+      backdrop-filter: blur(20px);
+      z-index: 40;
+      transition: right 0.3s ease;
+      padding: 24px 20px;
+      overflow-y: auto;
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
+    #memoryPanel.open { right: 0; }
+    .panel-title {
       font-size: 1rem;
       font-weight: 700;
-      margin: 32px 0 14px;
-      color: #374151;
+      margin-bottom: 16px;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 8px;
     }
+    .panel-close { cursor: pointer; opacity: 0.6; font-size: 1.2rem; }
 
-    .timeline { display: flex; flex-direction: column; gap: 12px; }
-    .timeline-item {
-      background: white;
-      border-radius: 12px;
-      padding: 16px 20px;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-      cursor: pointer;
-      transition: box-shadow 0.2s;
+    .mem-item {
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
     }
-    .timeline-item:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-    .timeline-meta {
+    .mem-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 6px;
     }
-    .timeline-time { font-size: 0.78rem; color: #9ca3af; }
-    .timeline-text { font-size: 0.92rem; color: #374151; }
-    .timeline-empty { color: #9ca3af; font-size: 0.9rem; text-align: center; padding: 20px; }
+    .mem-time { font-size: 0.72rem; opacity: 0.5; }
+    .mem-text { font-size: 0.85rem; opacity: 0.85; }
+    .mem-empty { opacity: 0.4; font-size: 0.85rem; text-align: center; padding: 20px; }
+    .mem-section-label { font-size: 0.65rem; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; margin-bottom: 2px; }
+    .mem-response { color: #a5b4fc; }
+    .mem-original { font-size: 0.75rem; opacity: 0.35; font-style: italic; margin-top: 6px; }
 
-    /* Loading spinner */
-    .spinner {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 3px solid rgba(255,255,255,0.4);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .error-msg {
-      background: #fde8e8;
-      color: #c0392b;
-      border-radius: 10px;
-      padding: 12px 16px;
-      margin-top: 12px;
-      font-size: 0.9rem;
+    /* No camera fallback */
+    #noCam {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      z-index: 0;
       display: none;
     }
-    .error-msg.visible { display: block; }
+
+    /* Face mesh canvas */
+    #faceCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Live face emotion badge */
+    #faceEmotionBadge {
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+    #faceEmotionBadge.visible { opacity: 1; }
+    #faceEmotionBadge .face-label { opacity: 0.6; font-size: 0.72rem; }
+
+    /* Emotion row in overlay */
+    .emotion-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .emotion-source {
+      font-size: 0.65rem;
+      opacity: 0.5;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
 
-<header>
+<div id="noCam"></div>
+<video id="camera" autoplay playsinline muted></video>
+<canvas id="faceCanvas"></canvas>
+
+<!-- Live face emotion -->
+<div id="faceEmotionBadge">
+  <span id="faceEmotionIcon">😐</span>
+  <span id="faceEmotionText">detecting...</span>
+  <span class="face-label">face</span>
+</div>
+
+<!-- Top bar -->
+<div class="topbar">
   <div>
     <h1>🧠 Clarity</h1>
-    <p>AI Cognitive Copilot — Real-Time Understanding & Memory</p>
+    <p>AI Cognitive Copilot</p>
   </div>
-</header>
+</div>
 
-<div class="container">
+<!-- Memory toggle -->
+<button id="memoryToggle" onclick="toggleMemory()">🕐 History</button>
 
-  <!-- Input -->
-  <div class="input-card">
-    <label for="textInput">Enter a sentence or conversation to process:</label>
-    <textarea id="textInput" placeholder="e.g. The physician recommended a bilateral nephrectomy due to renal carcinoma."></textarea>
-    <div class="error-msg" id="errorMsg"></div>
-    <button class="btn" id="processBtn" onclick="processText()">Analyze Text</button>
+<!-- Close overlay button -->
+<button id="closeBtn" onclick="closeOverlay()">✕</button>
+
+<!-- Transcript bubble -->
+<div id="transcript"></div>
+
+<!-- Live transcript strip (shows while speaking) -->
+<div id="liveStrip">
+  <div id="liveStripDot"></div>
+  <div id="liveStripText"></div>
+</div>
+
+<!-- Results overlay (bottom HUD) -->
+<div id="overlay">
+  <div class="ov-card response">
+    <div class="ov-title">💬 Supportive Response</div>
+    <div class="ov-body" id="ovResponse"></div>
   </div>
-
-  <!-- Results -->
-  <div class="results" id="results">
-    <div class="card response-card">
-      <div class="card-title">💬 Supportive Response</div>
-      <div class="card-body" id="responseText"></div>
-    </div>
-    <div class="card simplified-card">
-      <div class="card-title">✏️ Simplified Text</div>
-      <div class="card-body" id="simplifiedText"></div>
-    </div>
-    <div class="card explanation-card">
-      <div class="card-title">📖 Word Explanations</div>
-      <div class="card-body" id="explanationText"></div>
-    </div>
-    <div class="card emotion-card">
-      <div class="card-title">🎭 Detected Emotion</div>
-      <div class="emotion-row">
-        <span class="emotion-badge" id="emotionBadge"></span>
+  <div class="ov-card simplified">
+    <div class="ov-title">✏️ Simplified</div>
+    <div class="ov-body" id="ovSimplified"></div>
+  </div>
+  <div class="ov-card explanation">
+    <div class="ov-title">📖 Word Explanations</div>
+    <div class="ov-body" id="ovExplanation"></div>
+  </div>
+  <div class="ov-card emotion-card">
+    <div class="ov-title">🎭 Emotion</div>
+    <div class="emotion-row">
+      <div>
+        <span class="emotion-badge" id="ovEmotion"></span>
+        <div class="emotion-source">from voice</div>
+      </div>
+      <div id="ovFaceEmotionWrap" style="display:none">
+        <span class="emotion-badge" id="ovFaceEmotion"></span>
+        <div class="emotion-source">from face</div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Memory Timeline -->
-  <div class="section-title">
+<!-- Mic button -->
+<div class="mic-wrap">
+  <button id="micBtn" onclick="toggleMic()">🎤</button>
+  <div id="micLabel">Tap to listen to caller</div>
+</div>
+
+<!-- Memory panel -->
+<div id="memoryPanel">
+  <div class="panel-title">
     🕐 Memory Timeline
-    <button class="btn" style="margin:0; padding:6px 16px; font-size:0.82rem;" onclick="loadMemory()">Refresh</button>
+    <span class="panel-close" onclick="toggleMemory()">✕</span>
   </div>
-  <div class="timeline" id="timeline">
-    <div class="timeline-empty">No interactions yet.</div>
-  </div>
-
+  <div id="memoryList"><div class="mem-empty">No interactions yet.</div></div>
 </div>
 
 <script>
   const API = 'http://localhost:3000';
+  let recognition = null;
+  let isListening = false;
+  let autoMode = false;
+  let silenceTimer = null;
+  let currentFaceEmotion = null;
 
-  async function processText() {
-    const text = document.getElementById('textInput').value.trim();
-    const btn = document.getElementById('processBtn');
-    const errorMsg = document.getElementById('errorMsg');
+  // --- face-api.js emotion detection ---
+  // Maps face-api expressions to our emotion labels
+  const FACE_API_MAP = {
+    happy: 'happy',
+    sad: 'sad',
+    angry: 'angry',
+    fearful: 'anxious',
+    disgusted: 'stressed',
+    surprised: 'surprised',
+    neutral: 'calm',
+  };
 
-    errorMsg.classList.remove('visible');
+  async function setupFaceMesh(videoEl) {
+    const canvas = document.getElementById('faceCanvas');
 
-    if (!text) {
-      showError('Please enter some text first.');
+    // Load models from CDN
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+    try {
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+      ]);
+    } catch (e) {
+      console.warn('face-api models failed to load:', e);
       return;
     }
 
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Processing...';
+    // Run detection loop
+    setInterval(async () => {
+      if (!videoEl.videoWidth) return;
+      canvas.width = videoEl.videoWidth;
+      canvas.height = videoEl.videoHeight;
+
+      const detection = await faceapi
+        .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+        .withFaceExpressions();
+
+      if (!detection) {
+        document.getElementById('faceEmotionBadge').classList.remove('visible');
+        currentFaceEmotion = null;
+        return;
+      }
+
+      // Get the dominant expression
+      const expressions = detection.expressions;
+      const dominant = Object.entries(expressions)
+        .sort((a, b) => b[1] - a[1])[0][0];
+
+      const emotion = FACE_API_MAP[dominant] || 'calm';
+      currentFaceEmotion = emotion;
+
+      const emoji = EMOTION_EMOJI[emotion] || '😐';
+      document.getElementById('faceEmotionIcon').textContent = emoji;
+      document.getElementById('faceEmotionText').textContent = emotion;
+      document.getElementById('faceEmotionBadge').classList.add('visible');
+
+    }, 800); // check every 800ms
+  }
+
+  // --- Camera setup ---
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      const videoEl = document.getElementById('camera');
+      videoEl.srcObject = stream;
+      videoEl.onloadedmetadata = () => setupFaceMesh(videoEl);
+    } catch {
+      document.getElementById('noCam').style.display = 'block';
+    }
+  }
+
+  // --- Speech recognition setup ---
+  function setupSpeech() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      document.getElementById('micLabel').textContent = 'Voice not supported — use Chrome';
+      document.getElementById('micBtn').disabled = true;
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalTranscript = '';
+
+    recognition.onresult = (e) => {
+      let interim = '';
+      let final = '';
+      for (const result of e.results) {
+        if (result.isFinal) final += result[0].transcript;
+        else interim += result[0].transcript;
+      }
+
+      const display = interim || final;
+
+      // Show live strip while speaking — DON'T clear the results panel
+      if (display) {
+        document.getElementById('liveStripText').textContent = display;
+        document.getElementById('liveStrip').classList.add('visible');
+      }
+
+      clearTimeout(silenceTimer);
+      if (final) {
+        silenceTimer = setTimeout(() => {
+          if (final.trim()) {
+            document.getElementById('liveStrip').classList.remove('visible');
+            processText(final.trim());
+            final = '';
+          }
+        }, 1200); // 1.2s silence = end of utterance
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'no-speech' && autoMode) {
+        // restart silently in auto mode
+        try { recognition.start(); } catch {}
+        return;
+      }
+      stopListening();
+    };
+
+    recognition.onend = () => {
+      if (autoMode) {
+        // keep restarting in auto mode
+        try { recognition.start(); } catch {}
+      } else {
+        stopListening();
+      }
+    };
+  }
+
+  function toggleMic() {
+    if (autoMode) {
+      // Stop auto mode
+      autoMode = false;
+      isListening = false;
+      clearTimeout(silenceTimer);
+      try { recognition.stop(); } catch {}
+      document.getElementById('micBtn').classList.remove('listening');
+      document.getElementById('micBtn').textContent = '🎤';
+      document.getElementById('micLabel').textContent = 'Tap to listen to caller';
+      hideTranscript();
+    } else {
+      // Start auto mode
+      autoMode = true;
+      isListening = true;
+      try { recognition.start(); } catch {}
+      document.getElementById('micBtn').classList.add('listening');
+      document.getElementById('micBtn').textContent = '👂';
+      document.getElementById('micLabel').textContent = 'Listening to caller... tap to stop';
+    }
+  }
+
+  function startListening() { toggleMic(); }
+
+  function stopListening() {
+    autoMode = false;
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micBtn').textContent = '🎤';
+    document.getElementById('micLabel').textContent = 'Tap to listen to caller';
+  }
+
+  function showTranscript(text) {
+    const el = document.getElementById('transcript');
+    el.textContent = `"${text}"`;
+    el.classList.add('visible');
+  }
+
+  function hideTranscript() {
+    document.getElementById('transcript').classList.remove('visible');
+  }
+
+  // --- Process text through backend ---
+  async function processText(text) {
+    const micBtn = document.getElementById('micBtn');
+    micBtn.classList.add('processing');
+    micBtn.textContent = '⏳';
+    document.getElementById('micLabel').textContent = 'Processing...';
 
     try {
       const res = await fetch(`${API}/process`, {
@@ -252,71 +634,106 @@
       const data = await res.json();
 
       if (!res.ok) {
-        showError(data.error || 'Something went wrong.');
+        showTranscript(`Error: ${data.error}`);
         return;
       }
 
-      // Populate results
-      document.getElementById('responseText').textContent = data.response;
-      document.getElementById('simplifiedText').textContent = data.simplified_text;
-      document.getElementById('explanationText').textContent = data.explanation;
-
-      const badge = document.getElementById('emotionBadge');
-      badge.textContent = data.emotion;
-      badge.className = `emotion-badge emotion-${data.emotion}`;
-
-      document.getElementById('results').classList.add('visible');
-
-      // Refresh timeline
+      showOverlay(data);
       loadMemory();
 
-    } catch (err) {
-      showError('Could not connect to the backend. Make sure the server is running on port 3000.');
+    } catch {
+      showTranscript('Could not connect to backend. Is the server running?');
     } finally {
-      btn.disabled = false;
-      btn.innerHTML = 'Analyze Text';
+      micBtn.classList.remove('processing');
+      micBtn.textContent = '🎤';
+      document.getElementById('micLabel').textContent = 'Tap to speak';
     }
+  }
+
+  // --- Emotion blending ---
+  const EMOTION_VALENCE = {
+    excited: 0.9, happy: 0.8, grateful: 0.7, surprised: 0.5, calm: 0.3,
+    confused: -0.2, anxious: -0.5, sad: -0.6, stressed: -0.7, angry: -0.9,
+  };
+
+  function blendEmotions(voiceEmotion, faceEmotion) {
+    if (!faceEmotion) return voiceEmotion;
+    if (!voiceEmotion) return faceEmotion;
+    const avg = (EMOTION_VALENCE[voiceEmotion] + EMOTION_VALENCE[faceEmotion]) / 2;
+    return Object.entries(EMOTION_VALENCE)
+      .sort((a, b) => Math.abs(a[1] - avg) - Math.abs(b[1] - avg))[0][0];
+  }
+
+  const EMOTION_EMOJI = {
+    happy: '😊', excited: '🤩', grateful: '🙏', calm: '😌', surprised: '😲',
+    confused: '😕', stressed: '😰', anxious: '😟', sad: '😢', angry: '😠'
+  };
+
+  function emotionLabel(emotion) {
+    return `${EMOTION_EMOJI[emotion] || '🔵'} ${emotion}`;
+  }
+
+  // --- Overlay ---
+  function showOverlay(data) {
+    document.getElementById('liveStrip').classList.remove('visible');
+    document.getElementById('ovResponse').textContent = data.response;
+    document.getElementById('ovSimplified').textContent = data.simplified_text;
+
+    // Blend voice + face into one emotion
+    const blended = blendEmotions(data.emotion, currentFaceEmotion);
+    const badge = document.getElementById('ovEmotion');
+    badge.textContent = emotionLabel(blended);
+    badge.className = `emotion-badge emotion-${blended}`;
+
+    // Hide the separate face emotion wrap — we show one blended emotion now
+    document.getElementById('ovFaceEmotionWrap').style.display = 'none';
+
+    document.getElementById('overlay').classList.add('visible');
+    document.getElementById('closeBtn').classList.add('visible');
+  }
+
+  function closeOverlay() {
+    document.getElementById('overlay').classList.remove('visible');
+    document.getElementById('closeBtn').classList.remove('visible');
+  }
+
+  // --- Memory panel ---
+  function toggleMemory() {
+    const panel = document.getElementById('memoryPanel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) loadMemory();
   }
 
   async function loadMemory() {
     try {
       const res = await fetch(`${API}/memory`);
       const data = await res.json();
-      const timeline = document.getElementById('timeline');
+      const list = document.getElementById('memoryList');
 
       if (!data.length) {
-        timeline.innerHTML = '<div class="timeline-empty">No interactions yet.</div>';
+        list.innerHTML = '<div class="mem-empty">No interactions yet.</div>';
         return;
       }
 
-      timeline.innerHTML = data.map(item => `
-        <div class="timeline-item">
-          <div class="timeline-meta">
-            <span class="emotion-badge emotion-${item.emotion}">${item.emotion}</span>
-            <span class="timeline-time">${new Date(item.timestamp).toLocaleString()}</span>
+      list.innerHTML = data.map(item => `
+        <div class="mem-item">
+          <div class="mem-meta">
+            <span class="emotion-badge emotion-${item.emotion}">${EMOTION_EMOJI[item.emotion] || '🔵'} ${item.emotion}</span>
+            <span class="mem-time">${new Date(item.timestamp).toLocaleTimeString()}</span>
           </div>
-          <div class="timeline-text">${item.original_text}</div>
+          <div class="mem-section-label">💬 Response</div>
+          <div class="mem-text mem-response">${item.response}</div>
+          <div class="mem-section-label" style="margin-top:8px">✏️ Simplified</div>
+          <div class="mem-text">${item.simplified_text}</div>
+          <div class="mem-original">"${item.original_text}"</div>
         </div>
       `).join('');
-
-    } catch (err) {
-      // silently fail on timeline load
-    }
+    } catch { /* silent */ }
   }
 
-  function showError(msg) {
-    const el = document.getElementById('errorMsg');
-    el.textContent = msg;
-    el.classList.add('visible');
-  }
-
-  // Allow Ctrl+Enter to submit
-  document.getElementById('textInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) processText();
-  });
-
-  // Load timeline on page open
-  loadMemory();
+  // --- Init ---
+  startCamera();
+  setupSpeech();
 </script>
 
 </body>

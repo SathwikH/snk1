@@ -4,7 +4,7 @@ import { store } from '../storage/index.js';
 const router = Router();
 
 const REQUIRED_FIELDS = ['original_text', 'simplified_text', 'explanation', 'emotion', 'response'];
-const VALID_EMOTIONS = ['confused', 'stressed', 'neutral'];
+const VALID_EMOTIONS = ['happy', 'excited', 'grateful', 'calm', 'surprised', 'confused', 'stressed', 'anxious', 'sad', 'angry'];
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 router.get('/', async (req, res) => {

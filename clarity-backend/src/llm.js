@@ -38,8 +38,8 @@ async function doRequest(apiKey, systemPrompt, userContent) {
 const MOCK_RESPONSES = {
   simplifier: 'The doctor said you need to take your medicine two times a day. Eat food when you take it.',
   explainer: 'physician: a doctor who helps people stay healthy.\nbilateral: happening on both sides.\nnephrectomy: an operation to remove a kidney.\nrenal carcinoma: a type of cancer that grows in the kidney.',
-  emotion: 'neutral',
-  response: "You're doing a great job keeping track of your health. It's okay to take things one step at a time. I'm here if you need anything explained more simply.",
+  emotion: 'anxious',
+  response: "It sounds like you might be feeling a bit worried. That's completely okay. Take a breath — you don't have to figure everything out right now.",
 };
 
 export async function callLLM(systemPrompt, userContent) {
