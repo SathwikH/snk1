@@ -1,2 +1,2 @@
-# snk1
+# clarity
 CS Careers x AWS Kiro Hackathon Project
