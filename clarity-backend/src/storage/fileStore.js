@@ -34,5 +34,24 @@ export function createFileStore(filePath = 'memory.json') {
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }
 
-  return { save, getAll, getByDate };
+  function getByIds(ids) {
+    return readRecords().filter(r => ids.includes(r.id));
+  }
+
+  function getInRange(from, to) {
+    return readRecords()
+      .filter(r => r.timestamp >= from && r.timestamp <= to)
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  }
+
+  function deleteById(id) {
+    const records = readRecords().filter(r => r.id !== id);
+    writeFileSync(filePath, JSON.stringify(records, null, 2));
+  }
+
+  function clear() {
+    writeFileSync(filePath, '[]');
+  }
+
+  return { save, getAll, getByDate, getByIds, getInRange, clear };
 }

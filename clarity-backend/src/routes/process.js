@@ -6,7 +6,7 @@ const router = Router();
 
 router.post('/', async (req, res) => {
   try {
-    const { text } = req.body ?? {};
+    const { text, user_emotion, speaker_label } = req.body ?? {};
 
     if (!text || text.trim().length === 0) {
       return res.status(400).json({ error: 'text field is required and must be non-empty' });
@@ -16,7 +16,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'text field must not exceed 2000 characters' });
     }
 
-    const ctx = await runPipeline(text);
+    if (speaker_label && speaker_label.length > 50) {
+      return res.status(400).json({ error: 'speaker_label must not exceed 50 characters' });
+    }
+
+    const ctx = await runPipeline(text, { user_emotion, speaker_label });
 
     let result = ctx;
     try {

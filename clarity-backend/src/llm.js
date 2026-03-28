@@ -40,6 +40,10 @@ const MOCK_RESPONSES = {
   explainer: 'physician: a doctor who helps people stay healthy.\nbilateral: happening on both sides.\nnephrectomy: an operation to remove a kidney.\nrenal carcinoma: a type of cancer that grows in the kidney.',
   emotion: 'anxious',
   response: "It sounds like you might be feeling a bit worried. That's completely okay. Take a breath — you don't have to figure everything out right now.",
+  suggested_replies: '["I understand, thank you.", "Could you tell me more?", "That makes sense to me."]',
+  summary: '{"recap":"We discussed a medical topic and the user had some questions.","dominant_emotion":"anxious","confused_moments":["The doctor said something complex."]}',
+  briefing: '{"briefing_text":"You have a meeting coming up. Based on past conversations, the tone has been calm.","dominant_emotion":"calm","suggested_topics":["Check in","Next steps","Any questions","Follow up"]}',
+  task: 'Pick up medications from the hospital',
 };
 
 export async function callLLM(systemPrompt, userContent) {
@@ -48,6 +52,10 @@ export async function callLLM(systemPrompt, userContent) {
     if (systemPrompt.includes('simplification')) return MOCK_RESPONSES.simplifier;
     if (systemPrompt.includes('vocabulary')) return MOCK_RESPONSES.explainer;
     if (systemPrompt.includes('emotion classifier')) return MOCK_RESPONSES.emotion;
+    if (systemPrompt.includes('suggested replies')) return MOCK_RESPONSES.suggested_replies;
+    if (systemPrompt.includes('session recap')) return MOCK_RESPONSES.summary;
+    if (systemPrompt.includes('pre-call briefing')) return MOCK_RESPONSES.briefing;
+    if (systemPrompt.includes('task extraction')) return MOCK_RESPONSES.task;
     return MOCK_RESPONSES.response;
   }
 

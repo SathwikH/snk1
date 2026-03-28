@@ -18,11 +18,12 @@ function makeResponse(status, body) {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  process.env.OPENAI_API_KEY = 'test-key';
+  process.env.KIRO_API_KEY = 'test-key';
+  delete process.env.MOCK_LLM;
 });
 
 afterEach(() => {
-  delete process.env.OPENAI_API_KEY;
+  delete process.env.KIRO_API_KEY;
 });
 
 describe('callLLM', () => {
@@ -36,11 +37,11 @@ describe('callLLM', () => {
     expect(result).toBe('Hello, world!');
   });
 
-  test('throws LLMError if OPENAI_API_KEY is missing', async () => {
-    delete process.env.OPENAI_API_KEY;
+  test('throws LLMError if KIRO_API_KEY is missing', async () => {
+    delete process.env.KIRO_API_KEY;
 
     await expect(callLLM('system', 'user')).rejects.toThrow(LLMError);
-    await expect(callLLM('system', 'user')).rejects.toThrow('OPENAI_API_KEY is not set');
+    await expect(callLLM('system', 'user')).rejects.toThrow('KIRO_API_KEY is not set');
   });
 
   test('retries once on 429 and succeeds on second attempt', async () => {

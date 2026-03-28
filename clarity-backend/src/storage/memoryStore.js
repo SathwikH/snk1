@@ -23,5 +23,24 @@ export function createMemoryStore() {
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }
 
-  return { save, getAll, getByDate };
+  function getByIds(ids) {
+    return records.filter(r => ids.includes(r.id));
+  }
+
+  function getInRange(from, to) {
+    return records
+      .filter(r => r.timestamp >= from && r.timestamp <= to)
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  }
+
+  function deleteById(id) {
+    const idx = records.findIndex(r => r.id === id);
+    if (idx !== -1) records.splice(idx, 1);
+  }
+
+  function clear() {
+    records.length = 0;
+  }
+
+  return { save, getAll, getByDate, getByIds, getInRange, deleteById, clear };
 }

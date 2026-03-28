@@ -150,3 +150,121 @@ describe('fileStore', () => {
     }
   });
 });
+
+// --- getByIds / getInRange tests (memoryStore) ---
+
+describe('memoryStore – getByIds', () => {
+  let store;
+  beforeEach(() => { store = createMemoryStore(); });
+
+  test('returns records matching the given ids', () => {
+    const r1 = store.save({ original_text: 'a' });
+    const r2 = store.save({ original_text: 'b' });
+    store.save({ original_text: 'c' });
+    const result = store.getByIds([r1.id, r2.id]);
+    expect(result).toHaveLength(2);
+    expect(result.map(r => r.id)).toEqual(expect.arrayContaining([r1.id, r2.id]));
+  });
+
+  test('returns [] when no ids match', () => {
+    store.save({ original_text: 'a' });
+    expect(store.getByIds(['non-existent-id'])).toEqual([]);
+  });
+
+  test('returns [] for empty ids array', () => {
+    store.save({ original_text: 'a' });
+    expect(store.getByIds([])).toEqual([]);
+  });
+});
+
+describe('memoryStore – getInRange', () => {
+  let store;
+  beforeEach(() => { store = createMemoryStore(); });
+
+  test('returns records within the inclusive range', () => {
+    const r1 = store.save({ original_text: 'a' });
+    const r2 = store.save({ original_text: 'b' });
+    const r3 = store.save({ original_text: 'c' });
+    const result = store.getInRange(r1.timestamp, r3.timestamp);
+    expect(result.length).toBeGreaterThanOrEqual(3);
+  });
+
+  test('returns [] when range excludes all records', () => {
+    store.save({ original_text: 'a' });
+    expect(store.getInRange('1990-01-01T00:00:00.000Z', '1990-01-02T00:00:00.000Z')).toEqual([]);
+  });
+
+  test('returns records sorted newest-first', () => {
+    store.save({ original_text: 'x' });
+    store.save({ original_text: 'y' });
+    const all = store.getAll();
+    const result = store.getInRange(all[all.length - 1].timestamp, all[0].timestamp);
+    for (let i = 0; i < result.length - 1; i++) {
+      expect(result[i].timestamp >= result[i + 1].timestamp).toBe(true);
+    }
+  });
+});
+
+// --- getByIds / getInRange tests (fileStore) ---
+
+describe('fileStore – getByIds', () => {
+  let tmpDir, filePath, store;
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'clarity-test-'));
+    filePath = join(tmpDir, 'test.json');
+    store = createFileStore(filePath);
+  });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  test('returns records matching the given ids', () => {
+    const r1 = store.save({ original_text: 'a' });
+    const r2 = store.save({ original_text: 'b' });
+    store.save({ original_text: 'c' });
+    const result = store.getByIds([r1.id, r2.id]);
+    expect(result).toHaveLength(2);
+    expect(result.map(r => r.id)).toEqual(expect.arrayContaining([r1.id, r2.id]));
+  });
+
+  test('returns [] when no ids match', () => {
+    store.save({ original_text: 'a' });
+    expect(store.getByIds(['non-existent-id'])).toEqual([]);
+  });
+
+  test('returns [] for empty ids array', () => {
+    store.save({ original_text: 'a' });
+    expect(store.getByIds([])).toEqual([]);
+  });
+});
+
+describe('fileStore – getInRange', () => {
+  let tmpDir, filePath, store;
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'clarity-test-'));
+    filePath = join(tmpDir, 'test.json');
+    store = createFileStore(filePath);
+  });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  test('returns records within the inclusive range', () => {
+    const r1 = store.save({ original_text: 'a' });
+    const r3 = store.save({ original_text: 'c' });
+    const result = store.getInRange(r1.timestamp, r3.timestamp);
+    expect(result.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('returns [] when range excludes all records', () => {
+    store.save({ original_text: 'a' });
+    expect(store.getInRange('1990-01-01T00:00:00.000Z', '1990-01-02T00:00:00.000Z')).toEqual([]);
+  });
+
+  test('returns records sorted newest-first', async () => {
+    store.save({ original_text: 'x' });
+    await new Promise(r => setTimeout(r, 5));
+    store.save({ original_text: 'y' });
+    const all = store.getAll();
+    const result = store.getInRange(all[all.length - 1].timestamp, all[0].timestamp);
+    for (let i = 0; i < result.length - 1; i++) {
+      expect(result[i].timestamp >= result[i + 1].timestamp).toBe(true);
+    }
+  });
+});

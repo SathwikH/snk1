@@ -232,11 +232,13 @@
     }
     #closeBtn.visible { display: flex; }
 
-    /* Memory panel toggle */
-    #memoryToggle {
-      position: fixed;
-      top: 20px; right: 72px;
-      z-index: 30;
+    /* Memory panel toggle — now inside topbar */
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topbar-btn {
       background: rgba(255,255,255,0.15);
       backdrop-filter: blur(8px);
       border: none;
@@ -248,7 +250,9 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      white-space: nowrap;
     }
+    .topbar-btn:hover { background: rgba(255,255,255,0.25); }
 
     /* Memory side panel */
     #memoryPanel {
@@ -274,6 +278,28 @@
       align-items: center;
     }
     .panel-close { cursor: pointer; opacity: 0.6; font-size: 1.2rem; }
+    .panel-clear-btn {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #f87171;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .panel-clear-btn:hover { background: rgba(239,68,68,0.3); }
+    .item-del-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.3);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 0 2px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .item-del-btn:hover { color: #f87171; }
 
     .mem-item {
       background: rgba(255,255,255,0.06);
@@ -294,6 +320,35 @@
     .mem-response { color: #a5b4fc; }
     .mem-original { font-size: 0.75rem; opacity: 0.35; font-style: italic; margin-top: 6px; }
 
+    /* Color flash — small red star on left edge */
+    #colorFlash {
+      position: fixed;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      z-index: 15;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      cursor: pointer;
+      font-size: 2.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 0 8px rgba(239,68,68,0.9));
+    }
+    #colorFlash.visible {
+      opacity: 1;
+      pointer-events: auto;
+      animation: star-pulse 0.8s ease-in-out infinite alternate;
+    }
+    @keyframes star-pulse {
+      from { transform: translateY(-50%) scale(1); filter: drop-shadow(0 0 6px rgba(239,68,68,0.8)); }
+      to   { transform: translateY(-50%) scale(1.3); filter: drop-shadow(0 0 14px rgba(239,68,68,1)); }
+    }
+
     /* No camera fallback */
     #noCam {
       position: fixed;
@@ -303,39 +358,55 @@
       display: none;
     }
 
-    /* Face mesh canvas */
+    /* Face mesh canvas — kept for face-api but we don't draw on it */
     #faceCanvas {
       position: fixed;
       inset: 0;
       width: 100%;
       height: 100%;
-      transform: scaleX(-1);
       z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    /* Floating emotion badge container — sits over the video, NOT mirrored */
+    #faceBadgeLayer {
+      position: fixed;
+      inset: 0;
+      z-index: 8;
       pointer-events: none;
     }
 
-    /* Live face emotion badge */
-    #faceEmotionBadge {
-      position: fixed;
-      top: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      background: rgba(0,0,0,0.55);
+    .face-badge {
+      position: absolute;
+      background: rgba(10,10,35,0.82);
       backdrop-filter: blur(8px);
       border-radius: 20px;
-      padding: 6px 16px;
-      font-size: 0.85rem;
+      padding: 5px 12px 5px 10px;
+      font-size: 0.82rem;
       font-weight: 600;
+      color: white;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      white-space: nowrap;
+      border-left: 3px solid #63b3ed;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+      transform: translateX(-50%);
+      transition: left 0.25s ease, top 0.25s ease, opacity 0.3s;
       opacity: 0;
-      transition: opacity 0.4s;
-      pointer-events: none;
     }
-    #faceEmotionBadge.visible { opacity: 1; }
-    #faceEmotionBadge .face-label { opacity: 0.6; font-size: 0.72rem; }
+    .face-badge.visible { opacity: 1; }
+    .face-badge.them { border-left-color: #a78bfa; }
+    .face-badge .badge-who {
+      font-size: 0.6rem;
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Live face emotion badges — hidden, replaced by face-badge layer */
+    #faceEmotionBadge, #faceEmotionBadge2 { display: none; }
 
     /* Emotion row in overlay */
     .emotion-row {
@@ -351,6 +422,106 @@
       letter-spacing: 0.08em;
       margin-top: 2px;
     }
+
+    .reply-chip {
+      display: inline-block;
+      background: rgba(108,143,255,0.2);
+      border: 1px solid rgba(108,143,255,0.4);
+      color: white;
+      border-radius: 16px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin: 3px 2px;
+      transition: background 0.15s;
+    }
+    .reply-chip:hover { background: rgba(108,143,255,0.4); }
+    .reply-chip.copied { background: rgba(52,211,153,0.3); border-color: #34d399; }
+
+    .speaker-label {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-bottom: 4px;
+      opacity: 0.9;
+    }
+
+    .mem-summary {
+      background: rgba(108,143,255,0.1);
+      border-left: 3px solid #6c8fff;
+    }
+    .mem-summary-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #a5b4fc;
+    }
+
+    /* Prep button */
+    #prepBtn.pulsing {
+      animation: prep-pulse 2s infinite;
+    }
+    @keyframes prep-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(108,143,255,0.6); }
+      50% { box-shadow: 0 0 0 8px rgba(108,143,255,0); }
+    }
+
+    /* Tasks panel */
+    #tasksPanel {
+      position: fixed;
+      top: 0; left: -380px;
+      width: 340px;
+      height: 100vh;
+      background: rgba(10,10,25,0.92);
+      backdrop-filter: blur(20px);
+      z-index: 40;
+      transition: left 0.3s ease;
+      padding: 24px 20px;
+      overflow-y: auto;
+      border-right: 1px solid rgba(255,255,255,0.1);
+    }
+    #tasksPanel.open { left: 0; }
+
+    .task-item {
+      background: rgba(255,255,255,0.06);
+      border-left: 3px solid #34d399;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      opacity: 0.9;
+      animation: task-in 0.3s ease;
+    }
+    @keyframes task-in {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 0.9; transform: translateX(0); }
+    }
+    .task-time {
+      font-size: 0.65rem;
+      opacity: 0.4;
+      margin-top: 4px;
+    }
+    .tasks-empty {
+      opacity: 0.4;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 20px;
+    }
+    /* Tasks button badge — shows count when tasks exist */
+    #tasksBadge {
+      background: #34d399;
+      color: #000;
+      border-radius: 10px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      margin-left: 2px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -358,12 +529,24 @@
 <div id="noCam"></div>
 <video id="camera" autoplay playsinline muted></video>
 <canvas id="faceCanvas"></canvas>
+<div id="faceBadgeLayer">
+  <div class="face-badge" id="faceBadge0"><span class="badge-who">you</span><span id="faceBadgeText0">😐 calm</span></div>
+  <div class="face-badge them" id="faceBadge1"><span class="badge-who">them</span><span id="faceBadgeText1">😐 calm</span></div>
+</div>
+<div id="colorFlash" onclick="onFlashClick()">⭐</div>
 
-<!-- Live face emotion -->
+<!-- Live face emotion — YOUR face (hidden until second face detected) -->
 <div id="faceEmotionBadge">
   <span id="faceEmotionIcon">😐</span>
   <span id="faceEmotionText">detecting...</span>
-  <span class="face-label">face</span>
+  <span class="face-label">you</span>
+</div>
+
+<!-- Second person face emotion badge -->
+<div id="faceEmotionBadge2">
+  <span id="faceEmotionIcon2">😐</span>
+  <span id="faceEmotionText2">detecting...</span>
+  <span class="face-label">them</span>
 </div>
 
 <!-- Top bar -->
@@ -372,10 +555,11 @@
     <h1>🧠 Clarity</h1>
     <p>AI Cognitive Copilot</p>
   </div>
+  <div class="topbar-actions">
+    <button id="tasksBtn" class="topbar-btn" onclick="toggleTasksPanel()">📋 Tasks <span id="tasksBadge"></span></button>
+    <button id="memoryToggle" class="topbar-btn" onclick="toggleMemory()">🕐 History</button>
+  </div>
 </div>
-
-<!-- Memory toggle -->
-<button id="memoryToggle" onclick="toggleMemory()">🕐 History</button>
 
 <!-- Close overlay button -->
 <button id="closeBtn" onclick="closeOverlay()">✕</button>
@@ -416,6 +600,10 @@
       </div>
     </div>
   </div>
+  <div class="ov-card replies" id="repliesCard" style="display:none">
+    <div class="ov-title">💡 Suggested Replies</div>
+    <div id="repliesBody"></div>
+  </div>
 </div>
 
 <!-- Mic button -->
@@ -428,9 +616,26 @@
 <div id="memoryPanel">
   <div class="panel-title">
     🕐 Memory Timeline
-    <span class="panel-close" onclick="toggleMemory()">✕</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="undoMemoryBtn" class="panel-clear-btn" onclick="undoClearMemory()" style="display:none;background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.4);color:#34d399">↩ Undo</button>
+      <button class="panel-clear-btn" onclick="clearMemory()">🗑 Clear</button>
+      <span class="panel-close" onclick="toggleMemory()">✕</span>
+    </div>
   </div>
   <div id="memoryList"><div class="mem-empty">No interactions yet.</div></div>
+</div>
+
+<!-- Tasks panel -->
+<div id="tasksPanel">
+  <div class="panel-title">
+    📋 Tasks
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="undoTasksBtn" class="panel-clear-btn" onclick="undoClearTasks()" style="display:none;background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.4);color:#34d399">↩ Undo</button>
+      <button class="panel-clear-btn" onclick="clearTasks()">🗑 Clear</button>
+      <span class="panel-close" onclick="toggleTasksPanel()">✕</span>
+    </div>
+  </div>
+  <div id="tasksList"><div class="tasks-empty">No tasks yet. Tasks will appear here when someone gives you instructions.</div></div>
 </div>
 
 <script>
@@ -440,6 +645,47 @@
   let autoMode = false;
   let silenceTimer = null;
   let currentFaceEmotion = null;
+  let currentBlendedEmotion = null;
+  let sessionInteractionIds = [];
+  let overlayVisible = false;
+  let flashTimer = null;
+
+  // Calendar state (removed — replaced by tasks list)
+
+  // Speaker label state — auto-diarization via silence gap heuristic
+  // A new speaker is inferred when silence > SPEAKER_CHANGE_GAP ms between utterances
+  const SPEAKER_CHANGE_GAP = 3000; // 3s gap → likely a different speaker
+  let speakerCount = 0;
+  let currentSpeakerLabel = null;
+  let lastUtteranceTime = 0;
+
+  function inferSpeakerLabel() {
+    const now = Date.now();
+    const gap = now - lastUtteranceTime;
+    // First utterance or long gap → assign/rotate speaker
+    if (lastUtteranceTime === 0 || gap > SPEAKER_CHANGE_GAP) {
+      // Rotate to next speaker (cycle through up to 6)
+      speakerCount = (speakerCount % 6) + 1;
+      currentSpeakerLabel = `Speaker ${speakerCount}`;
+    }
+    lastUtteranceTime = now;
+    return currentSpeakerLabel;
+  }
+
+  function resetSpeakerTracking() {
+    speakerCount = 0;
+    currentSpeakerLabel = null;
+    lastUtteranceTime = 0;
+  }
+
+  const SPEAKER_PALETTE = ['#6c8fff','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
+  const speakerColors = new Map();
+  function getSpeakerColor(label) {
+    if (!speakerColors.has(label) && speakerColors.size < 6) {
+      speakerColors.set(label, SPEAKER_PALETTE[speakerColors.size]);
+    }
+    return speakerColors.get(label) || '#ffffff';
+  }
 
   // --- face-api.js emotion detection ---
   // Maps face-api expressions to our emotion labels
@@ -468,34 +714,60 @@
       return;
     }
 
-    // Run detection loop
+    // Run detection loop — position HTML badges above each face (no canvas drawing)
     setInterval(async () => {
       if (!videoEl.videoWidth) return;
-      canvas.width = videoEl.videoWidth;
-      canvas.height = videoEl.videoHeight;
 
-      const detection = await faceapi
-        .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+      const detections = await faceapi
+        .detectAllFaces(videoEl, new faceapi.TinyFaceDetectorOptions())
         .withFaceExpressions();
 
-      if (!detection) {
-        document.getElementById('faceEmotionBadge').classList.remove('visible');
+      const badge0 = document.getElementById('faceBadge0');
+      const badge1 = document.getElementById('faceBadge1');
+
+      if (!detections || detections.length === 0) {
+        badge0.classList.remove('visible');
+        badge1.classList.remove('visible');
         currentFaceEmotion = null;
         return;
       }
 
-      // Get the dominant expression
-      const expressions = detection.expressions;
-      const dominant = Object.entries(expressions)
-        .sort((a, b) => b[1] - a[1])[0][0];
+      // Sort largest face first (likely you)
+      detections.sort((a, b) =>
+        (b.detection.box.width * b.detection.box.height) -
+        (a.detection.box.width * a.detection.box.height)
+      );
 
-      const emotion = FACE_API_MAP[dominant] || 'calm';
-      currentFaceEmotion = emotion;
+      // Scale face-api coords (video space) → viewport space
+      // Video is mirrored via CSS scaleX(-1), so flip x
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scaleX = vw / videoEl.videoWidth;
+      const scaleY = vh / videoEl.videoHeight;
 
-      const emoji = EMOTION_EMOJI[emotion] || '😐';
-      document.getElementById('faceEmotionIcon').textContent = emoji;
-      document.getElementById('faceEmotionText').textContent = emotion;
-      document.getElementById('faceEmotionBadge').classList.add('visible');
+      detections.slice(0, 2).forEach((det, i) => {
+        const box = det.detection.box;
+        const dominant = Object.entries(det.expressions).sort((a, b) => b[1] - a[1])[0][0];
+        const emotion = FACE_API_MAP[dominant] || 'calm';
+        const emoji = EMOTION_EMOJI[emotion] || '😐';
+
+        if (i === 0) currentFaceEmotion = emotion;
+
+        // Center x in video space, then mirror for CSS scaleX(-1) on video
+        const centerXVideo = box.x + box.width / 2;
+        const mirroredX = (videoEl.videoWidth - centerXVideo) * scaleX;
+        const topY = Math.max(box.y * scaleY - 36, 70);
+
+        const badge = i === 0 ? badge0 : badge1;
+        const textEl = document.getElementById(`faceBadgeText${i}`);
+        textEl.textContent = `${emoji} ${emotion}`;
+        badge.style.left = mirroredX + 'px';
+        badge.style.top = topY + 'px';
+        badge.classList.add('visible');
+      });
+
+      // Hide second badge if only one face
+      if (detections.length < 2) badge1.classList.remove('visible');
 
     }, 800); // check every 800ms
   }
@@ -549,7 +821,8 @@
         silenceTimer = setTimeout(() => {
           if (final.trim()) {
             document.getElementById('liveStrip').classList.remove('visible');
-            processText(final.trim());
+            const label = inferSpeakerLabel();
+            processText(final.trim(), label);
             final = '';
           }
         }, 1200); // 1.2s silence = end of utterance
@@ -586,8 +859,23 @@
       document.getElementById('micBtn').textContent = '🎤';
       document.getElementById('micLabel').textContent = 'Tap to listen to caller';
       hideTranscript();
+
+      // Trigger post-call summary if we have session interactions
+      if (sessionInteractionIds.length > 0) {
+        const ids = [...sessionInteractionIds];
+        fetch(`${API}/summary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ interaction_ids: ids }),
+        })
+          .then(res => res.ok ? res.json() : Promise.reject(res))
+          .then(() => loadMemory())
+          .catch(err => console.error('Summary generation failed:', err));
+      }
+      sessionInteractionIds = [];
     } else {
       // Start auto mode
+      sessionInteractionIds = [];
       autoMode = true;
       isListening = true;
       try { recognition.start(); } catch {}
@@ -618,7 +906,7 @@
   }
 
   // --- Process text through backend ---
-  async function processText(text) {
+  async function processText(text, speakerLabel = null) {
     const micBtn = document.getElementById('micBtn');
     micBtn.classList.add('processing');
     micBtn.textContent = '⏳';
@@ -628,7 +916,11 @@
       const res = await fetch(`${API}/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({
+          text,
+          user_emotion: currentBlendedEmotion || undefined,
+          speaker_label: speakerLabel || undefined,
+        }),
       });
 
       const data = await res.json();
@@ -639,6 +931,7 @@
       }
 
       showOverlay(data);
+      if (data.id) sessionInteractionIds.push(data.id);
       loadMemory();
 
     } catch {
@@ -673,14 +966,55 @@
     return `${EMOTION_EMOJI[emotion] || '🔵'} ${emotion}`;
   }
 
+  // --- Color flash ---
+  function showColorFlash() {
+    const flash = document.getElementById('colorFlash');
+    clearTimeout(flashTimer);
+    flash.classList.add('visible');
+    flashTimer = setTimeout(hideColorFlash, 4000);
+  }
+
+  function hideColorFlash() {
+    const flash = document.getElementById('colorFlash');
+    clearTimeout(flashTimer);
+    flash.classList.remove('visible');
+  }
+
+  function onFlashClick() {
+    hideColorFlash();
+    openOverlay();
+  }
+
   // --- Overlay ---
+  function openOverlay() {
+    document.getElementById('overlay').classList.add('visible');
+    document.getElementById('closeBtn').classList.add('visible');
+  }
+
   function showOverlay(data) {
     document.getElementById('liveStrip').classList.remove('visible');
     document.getElementById('ovResponse').textContent = data.response;
     document.getElementById('ovSimplified').textContent = data.simplified_text;
 
+    const simplifiedCard = document.querySelector('.ov-card.simplified');
+    const existingLabel = simplifiedCard.querySelector('.speaker-label');
+    if (existingLabel) existingLabel.remove();
+    if (data.speaker_label) {
+      const color = getSpeakerColor(data.speaker_label);
+      simplifiedCard.style.borderLeftColor = color;
+      const labelEl = document.createElement('span');
+      labelEl.className = 'speaker-label';
+      labelEl.textContent = data.speaker_label;
+      labelEl.style.background = color + '33';
+      labelEl.style.color = color;
+      simplifiedCard.insertBefore(labelEl, simplifiedCard.firstChild);
+    } else {
+      simplifiedCard.style.borderLeftColor = '#34d399';
+    }
+
     // Blend voice + face into one emotion
     const blended = blendEmotions(data.emotion, currentFaceEmotion);
+    currentBlendedEmotion = blended;
     const badge = document.getElementById('ovEmotion');
     badge.textContent = emotionLabel(blended);
     badge.className = `emotion-badge emotion-${blended}`;
@@ -688,47 +1022,209 @@
     // Hide the separate face emotion wrap — we show one blended emotion now
     document.getElementById('ovFaceEmotionWrap').style.display = 'none';
 
-    document.getElementById('overlay').classList.add('visible');
-    document.getElementById('closeBtn').classList.add('visible');
+    // Populate suggested replies
+    const repliesCard = document.getElementById('repliesCard');
+    const repliesBody = document.getElementById('repliesBody');
+    repliesBody.innerHTML = '';
+    if (data.suggested_replies && data.suggested_replies.length > 0) {
+      repliesCard.style.display = 'block';
+      data.suggested_replies.forEach(reply => {
+        const btn = document.createElement('button');
+        btn.className = 'reply-chip';
+        btn.textContent = reply;
+        btn.onclick = () => {
+          navigator.clipboard.writeText(reply).catch(() => {});
+          btn.classList.add('copied');
+          setTimeout(() => btn.classList.remove('copied'), 1500);
+        };
+        repliesBody.appendChild(btn);
+      });
+    } else {
+      repliesCard.style.display = 'none';
+    }
+
+    // Auto-add extracted task to task list
+    if (data.extracted_task) {
+      addTask(data.extracted_task);
+    }
+
+    // Compute confusion signal and trigger flash if overlay not already open
+    const confusionSignal = ['confused', 'stressed'].includes(data.emotion) ||
+      (data.explanation && data.explanation !== 'No complex terms found.');
+    if (confusionSignal && !overlayVisible) {
+      showColorFlash();
+    }
+
+    overlayVisible = true;
+    openOverlay();
   }
 
   function closeOverlay() {
     document.getElementById('overlay').classList.remove('visible');
     document.getElementById('closeBtn').classList.remove('visible');
+    overlayVisible = false;
   }
 
   // --- Memory panel ---
+  let memoryCleared = false;
+  let memorySnapshot = [];
+
   function toggleMemory() {
     const panel = document.getElementById('memoryPanel');
     panel.classList.toggle('open');
-    if (panel.classList.contains('open')) loadMemory();
+    if (panel.classList.contains('open') && !memoryCleared) loadMemory();
+  }
+
+  async function clearMemory() {
+    try {
+      const res = await fetch(`${API}/memory`);
+      memorySnapshot = await res.json();
+    } catch { memorySnapshot = []; }
+    memoryCleared = true;
+    try { await fetch(`${API}/memory`, { method: 'DELETE' }); } catch {}
+    document.getElementById('memoryList').innerHTML = '<div class="mem-empty">No interactions yet.</div>';
+    document.getElementById('undoMemoryBtn').style.display = 'inline';
+  }
+
+  async function undoClearMemory() {
+    for (const item of [...memorySnapshot].reverse()) {
+      try {
+        await fetch(`${API}/memory`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item),
+        });
+      } catch {}
+    }
+    memoryCleared = false;
+    memorySnapshot = [];
+    document.getElementById('undoMemoryBtn').style.display = 'none';
+    loadMemory();
+  }
+
+  async function deleteMemoryItem(id) {
+    try { await fetch(`${API}/memory/${id}`, { method: 'DELETE' }); } catch {}
+    loadMemory();
   }
 
   async function loadMemory() {
+    if (memoryCleared) return;
     try {
       const res = await fetch(`${API}/memory`);
       const data = await res.json();
       const list = document.getElementById('memoryList');
-
       if (!data.length) {
         list.innerHTML = '<div class="mem-empty">No interactions yet.</div>';
         return;
       }
-
-      list.innerHTML = data.map(item => `
-        <div class="mem-item">
-          <div class="mem-meta">
-            <span class="emotion-badge emotion-${item.emotion}">${EMOTION_EMOJI[item.emotion] || '🔵'} ${item.emotion}</span>
-            <span class="mem-time">${new Date(item.timestamp).toLocaleTimeString()}</span>
-          </div>
-          <div class="mem-section-label">💬 Response</div>
-          <div class="mem-text mem-response">${item.response}</div>
-          <div class="mem-section-label" style="margin-top:8px">✏️ Simplified</div>
-          <div class="mem-text">${item.simplified_text}</div>
-          <div class="mem-original">"${item.original_text}"</div>
-        </div>
-      `).join('');
+      list.innerHTML = data.map(item => {
+        const delBtn = `<button class="item-del-btn" onclick="deleteMemoryItem('${item.id}')">✕</button>`;
+        if (item.type === 'summary') {
+          return `
+            <div class="mem-item mem-summary">
+              <div class="mem-meta">
+                <span class="mem-summary-header">📋 Session Summary</span>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <span class="mem-time">${new Date(item.timestamp).toLocaleTimeString()}</span>
+                  ${delBtn}
+                </div>
+              </div>
+              <div class="mem-text">${item.recap}</div>
+              ${item.confused_moments && item.confused_moments.length > 0 ? `
+                <div class="mem-section-label" style="margin-top:8px">⚠️ Confusing moments</div>
+                ${item.confused_moments.map(m => `<div class="mem-text" style="opacity:0.6;font-size:0.78rem">"${m}"</div>`).join('')}
+              ` : ''}
+            </div>`;
+        }
+        return `
+          <div class="mem-item">
+            <div class="mem-meta">
+              ${item.speaker_label ? `<span class="speaker-label" style="background:${getSpeakerColor(item.speaker_label)}33;color:${getSpeakerColor(item.speaker_label)}">${item.speaker_label}</span>` : ''}
+              <span class="emotion-badge emotion-${item.emotion}">${EMOTION_EMOJI[item.emotion] || '🔵'} ${item.emotion}</span>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span class="mem-time">${new Date(item.timestamp).toLocaleTimeString()}</span>
+                ${delBtn}
+              </div>
+            </div>
+            <div class="mem-section-label">💬 Response</div>
+            <div class="mem-text mem-response">${item.response}</div>
+            <div class="mem-section-label" style="margin-top:8px">✏️ Simplified</div>
+            <div class="mem-text">${item.simplified_text}</div>
+            <div class="mem-original">"${item.original_text}"</div>
+          </div>`;
+      }).join('');
     } catch { /* silent */ }
+  }
+
+  // --- Tasks list ---
+  const tasksList = [];
+  let tasksSnapshot = [];
+
+  function toggleTasksPanel() {
+    document.getElementById('tasksPanel').classList.toggle('open');
+  }
+
+  function clearTasks() {
+    tasksSnapshot = [...tasksList];
+    tasksList.length = 0;
+    renderTasks();
+    const badge = document.getElementById('tasksBadge');
+    badge.style.display = 'none';
+    badge.textContent = '';
+    document.getElementById('undoTasksBtn').style.display = 'inline';
+  }
+
+  function undoClearTasks() {
+    tasksList.push(...tasksSnapshot);
+    tasksSnapshot = [];
+    renderTasks();
+    document.getElementById('undoTasksBtn').style.display = 'none';
+    const badge = document.getElementById('tasksBadge');
+    badge.textContent = tasksList.length;
+    badge.style.display = tasksList.length ? 'inline' : 'none';
+  }
+
+  function removeTask(index) {
+    tasksList.splice(index, 1);
+    renderTasks();
+    const badge = document.getElementById('tasksBadge');
+    if (tasksList.length === 0) { badge.style.display = 'none'; badge.textContent = ''; }
+    else badge.textContent = tasksList.length;
+  }
+
+  function addTask(taskText) {
+    tasksList.unshift({ text: taskText, time: new Date() });
+    renderTasks();
+    const btn = document.getElementById('tasksBtn');
+    btn.style.background = 'rgba(52,211,153,0.4)';
+    setTimeout(() => btn.style.background = '', 1200);
+    const badge = document.getElementById('tasksBadge');
+    badge.textContent = tasksList.length;
+    badge.style.display = 'inline';
+  }
+
+  function renderTasks() {
+    const list = document.getElementById('tasksList');
+    if (tasksList.length === 0) {
+      list.innerHTML = '<div class="tasks-empty">No tasks yet. Tasks will appear here when someone gives you instructions.</div>';
+      return;
+    }
+    list.innerHTML = tasksList.map((t, i) => `
+      <div class="task-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          ${t.text}
+          <div class="task-time">${t.time.toLocaleTimeString()}</div>
+        </div>
+        <button class="item-del-btn" onclick="removeTask(${i})" style="flex-shrink:0;margin-top:2px">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function showToastError(msg) {
+    const el = document.getElementById('transcript');
+    el.textContent = `⚠️ ${msg}`;
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 3000);
   }
 
   // --- Init ---
