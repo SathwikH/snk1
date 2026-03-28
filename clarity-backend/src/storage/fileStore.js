@@ -53,5 +53,5 @@ export function createFileStore(filePath = 'memory.json') {
     writeFileSync(filePath, '[]');
   }
 
-  return { save, getAll, getByDate, getByIds, getInRange, clear };
+  return { save, getAll, getByDate, getByIds, getInRange, deleteById, clear };
 }

@@ -919,6 +919,7 @@
         body: JSON.stringify({
           text,
           user_emotion: currentBlendedEmotion || undefined,
+          face_emotion: currentFaceEmotion || undefined,
           speaker_label: speakerLabel || undefined,
         }),
       });
