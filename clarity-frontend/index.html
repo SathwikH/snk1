@@ -552,12 +552,11 @@
 <!-- Top bar -->
 <div class="topbar">
   <div>
-    <h1>🧠 Clarity</h1>
-    <p>AI Cognitive Copilot</p>
+    <h1>Clarity</h1>
   </div>
   <div class="topbar-actions">
-    <button id="tasksBtn" class="topbar-btn" onclick="toggleTasksPanel()">📋 Tasks <span id="tasksBadge"></span></button>
-    <button id="memoryToggle" class="topbar-btn" onclick="toggleMemory()">🕐 History</button>
+    <button id="tasksBtn" class="topbar-btn" onclick="toggleTasksPanel()">Tasks <span id="tasksBadge"></span></button>
+    <button id="memoryToggle" class="topbar-btn" onclick="toggleMemory()">History</button>
   </div>
 </div>
 
@@ -615,7 +614,7 @@
 <!-- Memory panel -->
 <div id="memoryPanel">
   <div class="panel-title">
-    🕐 Memory Timeline
+    Memory Timeline
     <div style="display:flex;gap:8px;align-items:center">
       <button id="undoMemoryBtn" class="panel-clear-btn" onclick="undoClearMemory()" style="display:none;background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.4);color:#34d399">↩ Undo</button>
       <button class="panel-clear-btn" onclick="clearMemory()">🗑 Clear</button>
@@ -1149,7 +1148,7 @@
             </div>
             <div class="mem-section-label">💬 Response</div>
             <div class="mem-text mem-response">${item.response}</div>
-            <div class="mem-section-label" style="margin-top:8px">✏️ Simplified</div>
+            <div class="mem-section-label" style="margin-top:8px">Simplified</div>
             <div class="mem-text">${item.simplified_text}</div>
             <div class="mem-original">"${item.original_text}"</div>
           </div>`;
