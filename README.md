@@ -1,7 +1,5 @@
 # Clarity — AI Cognitive Copilot
 
-Built for the CS Careers x AWS Kiro Hackathon.
-
 Clarity is a real-time AI assistant designed to help people with cognitive challenges — including autistic individuals — understand and navigate conversations as they happen. It listens to spoken audio, analyzes the emotional context, simplifies complex language, extracts action items, and generates supportive responses, all in real time.
 
 ---
